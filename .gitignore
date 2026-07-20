@@ -1,0 +1,11 @@
+# Exclude datasets and build artifacts
+data/
+boost.zip
+boost_1_83_0/
+giotto-tda-0.1.4/
+giotto-tda-0.1.4.tar.gz
+giotto-tda-git/
+__pycache__/
+.idea/
+.vscode/
+*.pyc
