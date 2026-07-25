@@ -1,0 +1,24 @@
+# Tasks
+
+- [x] Create `tda_benchmark.py` in the workspace root
+- [x] Implement dynamic dependency verification
+- [x] Implement robust image ingestion & preprocessing (with grayscale, Gaussian blur, resize, and balanced weight computations)
+- [x] Implement memory-efficient topological feature extraction (with batched processing, `gc.collect()`, and NaN/Inf validation)
+- [x] Implement multi-model benchmarking (Stratified 5-Fold CV, remaining time countdown, and convergence/overfitting warnings)
+- [x] Implement high-resolution (300 DPI) publication-grade visualizations
+- [x] Run the complete script and verify console output (markdown table) and generated image assets
+- [x] Implement automated ROI tumor cropping (Otsu Adaptive Thresholding)
+- [x] Implement dual-representation topological features (Persistence Landscapes + Persistence Images)
+- [x] Run the final leakage-free StratifiedGroupKFold benchmark and verify results
+- [x] Implement pre-trained feature extractors (ResNet18 & MobileNetV2) accepting grayscale inputs
+- [x] Implement Model A, Model B, and Model C hybrid fusion architectures inside the StratifiedGroupKFold loop
+- [x] Implement medical-domain weight optimization using self-supervised Autoencoders inside the loop
+- [x] Implement in-pipeline PCA (n_components=100) dimensionality reduction track inside the loop
+- [x] Implement in-pipeline L1 selection (SelectFromModel with LinearSVC) feature selection track inside the loop
+- [x] Run the medical-weighted and feature-reduced hybrid benchmark and verify results
+- [x] Run Task A (Landscape vs. Image ablation on a single fold) and record results
+- [x] Run Task B (CPU Inference Runtime Profiling on 100 images) and record latency
+- [x] Run Task C (Image Resolution Ablation 64x64 vs 128x128 on 500 samples) and record results
+- [x] Implement Kronecker Fusion, HistGradientBoosting, CPU TTA, and render 300 DPI figures
+- [x] Implement Dynamic Early-Exit, Calibrated Conformal Prediction, and Tree SHAP explanation with 300 DPI figures
+- [x] Generate the walkthrough.md artifact summarizing changes and outputs
