@@ -40,7 +40,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # =====================================================================
 # 1. Cascading Early-Exit & Conformal Prediction Loop
 # =====================================================================
-def run_early_exit_conformal_fold(X_hybrid_train, y_train, X_hybrid_val, y_val, tda_dim=5600, tau=0.95, alpha=0.05, cal_size=0.2, random_state=RANDOM_STATE):
+def run_early_exit_conformal_fold(X_hybrid_train, y_train, X_hybrid_val, y_val, tda_dim=5600, tau=0.75, alpha=0.05, cal_size=0.2, random_state=RANDOM_STATE):
     """
     Evaluates a single fold using Dynamic Early-Exit and Split Conformal Prediction.
     """
@@ -66,8 +66,8 @@ def run_early_exit_conformal_fold(X_hybrid_train, y_train, X_hybrid_val, y_val, 
     base_complex_model = ExtraTreesClassifier(n_estimators=500, class_weight='balanced', random_state=random_state, n_jobs=-1)
     base_complex_model.fit(X_pt_scaled, y_pt)
     
-    # Wrap in CalibratedClassifierCV with isotonic calibration pre-fit on calibration set using FrozenEstimator
-    calibrated_complex_model = CalibratedClassifierCV(estimator=FrozenEstimator(base_complex_model), method='isotonic')
+    # Wrap in CalibratedClassifierCV with Platt scaling (sigmoid) pre-fit on calibration set using FrozenEstimator
+    calibrated_complex_model = CalibratedClassifierCV(estimator=FrozenEstimator(base_complex_model), method='sigmoid')
     calibrated_complex_model.fit(X_cal_scaled, y_cal)
     
     # Compute non-conformity scores on calibration set using the calibrated complex model
@@ -75,10 +75,9 @@ def run_early_exit_conformal_fold(X_hybrid_train, y_train, X_hybrid_val, y_val, 
     cal_scores = 1.0 - cal_probs[np.arange(len(y_cal)), y_cal]
     
     # Calculate q_hat for conformal prediction (95% coverage)
-    n_cal = len(cal_scores)
-    k = int(np.ceil((n_cal + 1) * (1.0 - alpha)))
-    k = min(max(k, 1), n_cal)
-    q_hat = np.sort(cal_scores)[k - 1]
+    q_val = (1.0 - alpha) * (1.0 + 1.0 / len(cal_scores))
+    q_val = min(max(q_val, 0.0), 1.0)
+    q_hat = np.quantile(cal_scores, q_val)
     
     # C. Inference on Validation Set
     X_val_cnn = scaler_cnn.transform(X_hybrid_val[:, tda_dim:])
@@ -269,7 +268,7 @@ def main():
             X_hybrid_val=X_hybrid_val,
             y_val=y_val,
             tda_dim=tda_dim,
-            tau=0.95,
+            tau=0.75,
             alpha=0.05,
             cal_size=0.2,
             random_state=RANDOM_STATE + fold
