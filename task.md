@@ -21,4 +21,5 @@
 - [x] Run Task C (Image Resolution Ablation 64x64 vs 128x128 on 500 samples) and record results
 - [x] Implement Kronecker Fusion, HistGradientBoosting, CPU TTA, and render 300 DPI figures
 - [x] Implement Dynamic Early-Exit, Calibrated Conformal Prediction, and Tree SHAP explanation with 300 DPI figures
+- [x] Revert to baseline PCA + ExtraTrees pipeline with SHAP Beeswarm & Importance plots (300 DPI)
 - [x] Generate the walkthrough.md artifact summarizing changes and outputs
