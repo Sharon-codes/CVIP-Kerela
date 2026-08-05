@@ -22,4 +22,6 @@
 - [x] Implement Kronecker Fusion, HistGradientBoosting, CPU TTA, and render 300 DPI figures
 - [x] Implement Dynamic Early-Exit, Calibrated Conformal Prediction, and Tree SHAP explanation with 300 DPI figures
 - [x] Revert to baseline PCA + ExtraTrees pipeline with SHAP Beeswarm & Importance plots (300 DPI)
+- [x] Implement Q1 Journal Test Suite (`core_pipeline.py`, `physics_engine.py`, `exp_robustness.py`, `exp_hardware.py`, `exp_ablation.py`, `exp_clinical_stats.py`, `run_all.py`) proving the Topological Hardware Shield thesis
+- [x] Generate 10 publication-ready 300 DPI JPEGs and compile `results_report.md`
 - [x] Generate the walkthrough.md artifact summarizing changes and outputs
