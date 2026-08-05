@@ -62,9 +62,9 @@ def run_experiment_7_feature_waterfall(X_cnn_tr, X_tda_tr, y_tr, X_cnn_va, X_tda
 
         clf = ExtraTreesClassifier(
             n_estimators=500,
-            max_depth=None,
-            min_samples_split=2,
             class_weight='balanced',
+            max_features='sqrt',
+            min_samples_leaf=4,
             random_state=RANDOM_STATE,
             n_jobs=-1
         )
@@ -139,9 +139,9 @@ def run_experiment_8_pca_sweep(X_hybrid_tr, y_tr, X_hybrid_va, y_va, save_dir="i
 
         clf = ExtraTreesClassifier(
             n_estimators=500,
-            max_depth=None,
-            min_samples_split=2,
             class_weight='balanced',
+            max_features='sqrt',
+            min_samples_leaf=4,
             random_state=RANDOM_STATE,
             n_jobs=-1
         )

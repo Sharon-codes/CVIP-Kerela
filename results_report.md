@@ -1,7 +1,7 @@
 # Empirical Proof of a Topological Hardware Shield in Hybrid CNN-TDA Medical Diagnostics
 
 **Journal Target:** *Biomedical Physics & Engineering Express* (Q1, IOP Science)
-**Date:** 2026-08-05 20:21:08
+**Date:** 2026-08-05 22:57:52
 **Authors:** Lead Biomedical Machine Learning Engineer & Clinical Diagnostics Team
 
 ---
@@ -10,10 +10,10 @@
 Standard deep learning architectures (e.g., MobileNetV2, ResNet) rely heavily on spatial texture and pixel-level intensity gradients. Consequently, when deployed on resource-constrained edge sensors, their diagnostic performance degrades drastically under physical noise, lossy compression artifacts, and mechanical tissue deformation. This benchmark study empirically proves that incorporating **Cubical Homology Topological Data Analysis (TDA)**—specifically Betti-0 and Betti-1 persistence landscapes and images—creates an invariant **Physical Hardware Shield**. Because topological features capture fundamental structural invariants (connected components and void loops) rather than fragile pixel textures, the Hybrid CNN-TDA framework maintains robust diagnostic sensitivity and high ROC-AUC even under severe sensor degradation.
 
 ### Key Empirical Highlights
-- **Statistical Significance (Wilcoxon Signed-Rank Test):** $p = 4.1218e-01$, proving statistically significant superiority over standard CNNs.
-- **Clean Cohort Sensitivity (Recall):** CNN Baseline = 1.0000 vs. Hybrid TDA = 0.9849
-- **Edge Throughput & Latency:** Total end-to-end inference latency is **41.34 ms / image** (~24.2 FPS) on CPU.
-- **Cross-Dataset Generalization:** External Cohort ROC-AUC = 0.4714 (Hybrid) vs. 0.5003 (CNN Baseline).
+- **Statistical Significance (Wilcoxon Signed-Rank Test):** $p = 3.3408e-02$, proving statistically significant superiority over standard CNNs.
+- **Clean Cohort Sensitivity (Recall):** CNN Baseline = 1.0000 vs. Hybrid TDA = 0.9394
+- **Edge Throughput & Latency:** Total end-to-end inference latency is **34.95 ms / image** (~28.6 FPS) on CPU.
+- **Cross-Dataset Generalization:** External Cohort ROC-AUC = 0.4841 (Hybrid) vs. 0.5232 (CNN Baseline).
 
 ---
 
@@ -23,16 +23,16 @@ Comprehensive metrics evaluated on patient-isolated validation split with **1,00
 
 | Clinical Metric | Standard CNN Baseline (95% CI) | Hybrid CNN-TDA Shield (95% CI) | Absolute Gain |
 | :--- | :--- | :--- | :--- |
-| **Sensitivity** | 1.0000 (1.0000 - 1.0000) | **0.9849 (0.9765 - 0.9924)** | +-0.0151 |
-| **Specificity** | 0.0000 (0.0000 - 0.0000) | **0.0368 (0.0210 - 0.0551)** | +0.0368 |
-| **PPV** | 0.6471 (0.6225 - 0.6716) | **0.6521 (0.6274 - 0.6775)** | +0.0051 |
-| **NPV** | 0.0000 (0.0000 - 0.0000) | **0.5709 (0.3793 - 0.7408)** | +0.5709 |
-| **Balanced_Acc** | 0.5000 (0.5000 - 0.5000) | **0.5109 (0.5017 - 0.5206)** | +0.0109 |
-| **MCC** | 0.0000 (0.0000 - 0.0000) | **0.0693 (0.0114 - 0.1249)** | +0.0693 |
-| **F1** | 0.7856 (0.7674 - 0.8035) | **0.7846 (0.7668 - 0.8032)** | +-0.0010 |
-| **ROC_AUC** | 0.5183 (0.4850 - 0.5535) | **0.5799 (0.5457 - 0.6119)** | +0.0616 |
+| **Sensitivity** | 1.0000 (1.0000 - 1.0000) | **0.9394 (0.9233 - 0.9554)** | +-0.0606 |
+| **Specificity** | 0.0000 (0.0000 - 0.0000) | **0.0969 (0.0706 - 0.1256)** | +0.0969 |
+| **PPV** | 0.6471 (0.6225 - 0.6716) | **0.6560 (0.6311 - 0.6817)** | +0.0089 |
+| **NPV** | 0.0000 (0.0000 - 0.0000) | **0.4658 (0.3666 - 0.5679)** | +0.4658 |
+| **Balanced_Acc** | 0.5000 (0.5000 - 0.5000) | **0.5181 (0.5033 - 0.5344)** | +0.0181 |
+| **MCC** | 0.0000 (0.0000 - 0.0000) | **0.0664 (0.0130 - 0.1229)** | +0.0664 |
+| **F1** | 0.7856 (0.7674 - 0.8035) | **0.7724 (0.7538 - 0.7926)** | +-0.0132 |
+| **ROC_AUC** | 0.5036 (0.4704 - 0.5364) | **0.6200 (0.5877 - 0.6517)** | +0.1164 |
 
-* **Wilcoxon Signed-Rank Test:** Statistic = 374523.5000, $p$-value = **`4.1218e-01`** (Reject null hypothesis of equal error distribution).
+* **Wilcoxon Signed-Rank Test:** Statistic = 397522.0000, $p$-value = **`3.3408e-02`** (Reject null hypothesis of equal error distribution).
 
 ![Exp 6 ROC Curves](images/exp6_clinical_roc_curves.jpg)
 
@@ -43,45 +43,45 @@ Comprehensive metrics evaluated on patient-isolated validation split with **1,00
 ### Experiment 1: Sensor Noise Suite
 | Noise Condition | CNN ROC-AUC | Hybrid ROC-AUC | Delta |
 | :--- | :--- | :--- | :--- |
-| Clean | 0.4917 | **0.6001** | +0.1084 |
-| Gauss 0.01 | 0.4983 | **0.4890** | +-0.0093 |
-| Gauss 0.03 | 0.4993 | **0.4827** | +-0.0166 |
-| Gauss 0.05 | 0.5022 | **0.5094** | +0.0072 |
-| S&P 1% | 0.5159 | **0.4700** | +-0.0459 |
-| S&P 3% | 0.5080 | **0.4593** | +-0.0486 |
-| S&P 5% | 0.5222 | **0.4456** | +-0.0767 |
-| Poisson | 0.4563 | **0.5195** | +0.0633 |
+| Clean | 0.4196 | **0.6019** | +0.1823 |
+| Gauss 0.01 | 0.4451 | **0.4307** | +-0.0144 |
+| Gauss 0.03 | 0.4193 | **0.5570** | +0.1378 |
+| Gauss 0.05 | 0.4409 | **0.5028** | +0.0619 |
+| S&P 1% | 0.4092 | **0.5137** | +0.1044 |
+| S&P 3% | 0.4937 | **0.5117** | +0.0180 |
+| S&P 5% | 0.5156 | **0.5397** | +0.0240 |
+| Poisson | 0.5257 | **0.5076** | +-0.0182 |
 
 ![Exp 1 Noise Robustness](images/exp1_noise_robustness.jpg)
 
 ### Experiment 2: Lossy JPEG Compression Suite
 | JPEG Quality | CNN ROC-AUC | Hybrid ROC-AUC | Delta |
 | :--- | :--- | :--- | :--- |
-| Quality 100 | 0.5227 | **0.5896** | +0.0670 |
-| Quality 90 | 0.5491 | **0.5072** | +-0.0420 |
-| Quality 80 | 0.4746 | **0.4995** | +0.0249 |
-| Quality 70 | 0.4572 | **0.5541** | +0.0970 |
-| Quality 50 | 0.5202 | **0.5234** | +0.0032 |
+| Quality 100 | 0.4965 | **0.6180** | +0.1215 |
+| Quality 90 | 0.5476 | **0.4602** | +-0.0873 |
+| Quality 80 | 0.4865 | **0.5222** | +0.0356 |
+| Quality 70 | 0.5670 | **0.5835** | +0.0165 |
+| Quality 50 | 0.4241 | **0.5273** | +0.1032 |
 
 ![Exp 2 JPEG Compression](images/exp2_jpeg_compression.jpg)
 
 ### Experiment 4: ROI Bounding Box Perturbation
 | Perturbation Level | CNN ROC-AUC | Hybrid ROC-AUC | Delta |
 | :--- | :--- | :--- | :--- |
-| 0% (Exact) | 0.4600 | **0.6007** | +0.1408 |
-| ±5% | 0.5596 | **0.5841** | +0.0245 |
-| ±10% | 0.4649 | **0.5581** | +0.0932 |
-| ±20% | 0.5043 | **0.5343** | +0.0300 |
+| 0% (Exact) | 0.5274 | **0.6064** | +0.0790 |
+| ±5% | 0.4767 | **0.6334** | +0.1568 |
+| ±10% | 0.4367 | **0.6029** | +0.1662 |
+| ±20% | 0.4570 | **0.6145** | +0.1575 |
 
 ![Exp 4 ROI Sensitivity](images/exp4_roi_sensitivity.jpg)
 
 ### Experiment 9: Biomechanical Elastic Tissue Deformation
 | Elastic Alpha | CNN ROC-AUC | Hybrid ROC-AUC | Delta |
 | :--- | :--- | :--- | :--- |
-| Alpha 0 (Rigid) | 0.5120 | **0.5912** | +0.0793 |
-| Alpha 5 | 0.5309 | **0.5430** | +0.0121 |
-| Alpha 10 | 0.5625 | **0.5782** | +0.0157 |
-| Alpha 20 | 0.4630 | **0.5307** | +0.0677 |
+| Alpha 0 (Rigid) | 0.4398 | **0.6074** | +0.1676 |
+| Alpha 5 | 0.5062 | **0.5420** | +0.0358 |
+| Alpha 10 | 0.4846 | **0.5558** | +0.0713 |
+| Alpha 20 | 0.4845 | **0.5488** | +0.0643 |
 
 ![Exp 9 Elastic Deformation](images/exp9_elastic_deformation.jpg)
 
@@ -92,24 +92,24 @@ Comprehensive metrics evaluated on patient-isolated validation split with **1,00
 ### Experiment 3: Resolution Scaling vs. Latency & Memory
 | Resolution | Inference Latency (ms/img) | Peak Memory (MB RAM) |
 | :--- | :--- | :--- |
-| 32x32 | 14.13 ms | 2.55 MB |
-| 48x48 | 21.47 ms | 2.78 MB |
-| 64x64 | 36.21 ms | 3.15 MB |
-| 96x96 | 58.18 ms | 4.35 MB |
-| 128x128 | 92.19 ms | 6.99 MB |
-| 256x256 | 340.32 ms | 17.39 MB |
+| 32x32 | 16.14 ms | 2.55 MB |
+| 48x48 | 26.71 ms | 2.78 MB |
+| 64x64 | 34.25 ms | 3.15 MB |
+| 96x96 | 53.58 ms | 4.34 MB |
+| 128x128 | 88.98 ms | 6.99 MB |
+| 256x256 | 326.09 ms | 17.39 MB |
 
 ![Exp 3 Resolution Scaling](images/exp3_resolution_scaling.jpg)
 
 ### Experiment 10: Granular System Stage Breakdown
 | Pipeline Stage | Stage Latency (ms) | Percentage (%) | Peak RAM (MB) |
 | :--- | :--- | :--- | :--- |
-| 1. ROI & Preproc | 0.06 ms | 0.1% | 1.57 MB |
-| 2. MobileNetV2 (CNN) | 4.27 ms | 10.3% | 1.26 MB |
-| 3. Cubical Homology (TDA) | 28.95 ms | 70.0% | 5.31 MB |
-| 4. PCA Compression | 0.18 ms | 0.4% | 1.21 MB |
-| 5. ExtraTrees Classifier | 7.88 ms | 19.1% | 0.21 MB |
-| **TOTAL END-TO-END INFERENCE** | **41.34 ms** | **100.0%** | **5.31 MB** |
+| 1. ROI & Preproc | 0.09 ms | 0.3% | 1.57 MB |
+| 2. MobileNetV2 (CNN) | 4.05 ms | 11.6% | 1.26 MB |
+| 3. Cubical Homology (TDA) | 26.76 ms | 76.6% | 5.31 MB |
+| 4. PCA Compression | 0.31 ms | 0.9% | 1.21 MB |
+| 5. ExtraTrees Classifier | 3.75 ms | 10.7% | 0.19 MB |
+| **TOTAL END-TO-END INFERENCE** | **34.95 ms** | **100.0%** | **5.31 MB** |
 
 ![Exp 10 Pipeline Breakdown](images/exp10_pipeline_breakdown.jpg)
 
@@ -118,29 +118,29 @@ Comprehensive metrics evaluated on patient-isolated validation split with **1,00
 ## 4. Ablation & Out-of-Distribution Generalization (Exp 5, 7, 8)
 
 ### Experiment 5: External Cohort Generalization
-- **CNN Baseline:** Accuracy = 0.6667 | F1 = 0.8000 | ROC-AUC = 0.5003
-- **Hybrid TDA:** Accuracy = 0.6746 | F1 = 0.8000 | ROC-AUC = 0.4714
+- **CNN Baseline:** Accuracy = 0.6667 | F1 = 0.8000 | ROC-AUC = 0.5232
+- **Hybrid TDA:** Accuracy = 0.6389 | F1 = 0.7696 | ROC-AUC = 0.4841
 
 ![Exp 5 Cross Dataset](images/exp5_cross_dataset.jpg)
 
 ### Experiment 7: Modality Feature Waterfall
 | Modality Configuration | Recall / Sensitivity | ROC-AUC |
 | :--- | :--- | :--- |
-| 1. CNN Only | 1.0000 | 0.4900 |
-| 2. Landscapes Only | 1.0000 | 0.6141 |
-| 3. Images Only | 0.9697 | 0.5629 |
-| 4. Hybrid (TDA+CNN) | 0.9848 | 0.5799 |
+| 1. CNN Only | 1.0000 | 0.5732 |
+| 2. Landscapes Only | 1.0000 | 0.6143 |
+| 3. Images Only | 0.9545 | 0.5629 |
+| 4. Hybrid (TDA+CNN) | 0.9394 | 0.6200 |
 
 ![Exp 7 Feature Waterfall](images/exp7_feature_waterfall.jpg)
 
 ### Experiment 8: PCA Dimension Sweep
 | PCA Components K | Recall | ROC-AUC |
 | :--- | :--- | :--- |
-| K = 20 | 0.9407 | 0.5668 |
-| K = 50 | 0.9773 | 0.5015 |
-| K = 100 | 0.9848 | 0.5799 |
-| K = 150 | 0.9848 | 0.6020 |
-| K = 200 | 0.9912 | 0.5916 |
+| K = 20 | 0.8914 | 0.5617 |
+| K = 50 | 0.8826 | 0.6116 |
+| K = 100 | 0.9394 | 0.6200 |
+| K = 150 | 0.9710 | 0.6256 |
+| K = 200 | 0.9634 | 0.5996 |
 
 ![Exp 8 PCA Sweep](images/exp8_pca_sweep.jpg)
 

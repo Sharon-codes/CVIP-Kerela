@@ -252,8 +252,6 @@ class MobileNetV2FeatureExtractor(nn.Module):
         except Exception:
             mobilenet = models.mobilenet_v2(pretrained=True)
             
-        # Adapt first conv layer to 1-channel grayscale
-        mobilenet.features[0][0] = nn.Conv2d(1, 32, kernel_size=3, stride=2, padding=1, bias=False)
         self.features = mobilenet.features
         self.pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(1280, out_dim)
@@ -269,6 +267,7 @@ class MobileNetV2FeatureExtractor(nn.Module):
 def extract_cnn(X_imgs, batch_size=128, out_dim=512):
     """
     Passes ROI images through pre-trained MobileNetV2 to extract a 512-D spatial vector per sample.
+    Converts 1-channel grayscale to 3 channels and applies standard ImageNet normalization.
     """
     device = torch.device("cpu")
     model = MobileNetV2FeatureExtractor(out_dim=out_dim).to(device)
@@ -277,12 +276,17 @@ def extract_cnn(X_imgs, batch_size=128, out_dim=512):
     n_samples = len(X_imgs)
     features = []
 
+    # ImageNet mean and std tensors
+    mean = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32).view(1, 3, 1, 1).to(device)
+    std = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32).view(1, 3, 1, 1).to(device)
+
     with torch.no_grad():
         for i in range(0, n_samples, batch_size):
             batch = X_imgs[i:i+batch_size]
-            t_batch = torch.tensor(batch, dtype=torch.float32).unsqueeze(1).to(device)
-            # Min-Max normalize
-            t_batch = (t_batch - t_batch.min()) / (t_batch.max() - t_batch.min() + 1e-8)
+            # Convert 1-channel grayscale (B, H, W) to 3-channel tensor (B, 3, H, W)
+            t_batch = torch.tensor(batch, dtype=torch.float32).unsqueeze(1).repeat(1, 3, 1, 1).to(device)
+            # Apply standard ImageNet normalization
+            t_batch = (t_batch - mean) / std
             feat = model(t_batch)
             features.append(feat.cpu().numpy())
 
@@ -349,25 +353,28 @@ def extract_tda(X_imgs, batch_size=500):
 # =====================================================================
 def build_models(n_components=100, random_state=RANDOM_STATE):
     """
-    Initializes CNN-only classifier and Hybrid pipeline.
+    Initializes CNN-only classifier and Hybrid pipeline wrapped with StandardScaler, PCA, and balanced ExtraTrees.
     """
-    cnn_model = ExtraTreesClassifier(
-        n_estimators=500,
-        max_depth=None,
-        min_samples_split=2,
-        class_weight='balanced',
-        random_state=random_state,
-        n_jobs=-1
-    )
+    cnn_model = Pipeline([
+        ('scaler', StandardScaler()),
+        ('clf', ExtraTreesClassifier(
+            n_estimators=500,
+            class_weight='balanced',
+            max_features='sqrt',
+            min_samples_leaf=4,
+            random_state=random_state,
+            n_jobs=-1
+        ))
+    ])
 
     hybrid_pipeline = Pipeline([
         ('scaler', StandardScaler()),
         ('pca', PCA(n_components=n_components, random_state=random_state)),
         ('clf', ExtraTreesClassifier(
             n_estimators=500,
-            max_depth=None,
-            min_samples_split=2,
             class_weight='balanced',
+            max_features='sqrt',
+            min_samples_leaf=4,
             random_state=random_state,
             n_jobs=-1
         ))
