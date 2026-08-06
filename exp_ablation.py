@@ -1,184 +1,137 @@
 #!/usr/bin/env python
 """
-Ablation & Hyperparameter Sweep Module:
-- Exp 7: Feature Waterfall (CNN-only vs Landscape vs Image vs Hybrid)
-- Exp 8: PCA Component Sweep (20, 50, 100, 150, 200) vs Recall & ROC-AUC
+Experiment 4: Strict Pipeline Component Ablation & SHAP Feature Quantification
+Evaluates the step-by-step contribution of each pipeline component:
+1. CNN Only (MobileNetV2 features -> SVM)
+2. TDA Only (Persistence Landscapes -> SVM)
+3. CNN + TDA (Concatenated -> SVM)
+4. CNN + TDA + L1 + PCA + SVM (Finalized Pipeline)
 
-Author: Lead Biomedical ML Engineer (Q1 Journal Submission Suite)
+Calculates SHAP values to quantify feature importance of Betti-1 TDA features vs. spatial features.
+
+Author: Lead Biomedical ML Engineer (IEEE Q1 Submission Suite)
 """
 
-import os
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-
+import shap
+import warnings
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectFromModel
+from sklearn.linear_model import LogisticRegression
 from sklearn.decomposition import PCA
-from sklearn.ensemble import ExtraTreesClassifier
-from sklearn.metrics import recall_score, roc_auc_score
+from sklearn.svm import SVC
+from sklearn.metrics import roc_auc_score, accuracy_score, recall_score, confusion_matrix
+
+from core_pipeline import load_real_images, extract_cnn, extract_tda
 
 RANDOM_STATE = 42
+np.random.seed(RANDOM_STATE)
+warnings.filterwarnings("ignore")
 
 
-# =====================================================================
-# Experiment 7: Feature Waterfall (Incremental Modality Gains)
-# =====================================================================
-def run_experiment_7_feature_waterfall(X_cnn_tr, X_tda_tr, y_tr, X_cnn_va, X_tda_va, y_va, save_dir="images", dpi=300):
-    print("\n[+] Running Experiment 7: Modality Feature Waterfall Suite...")
+def run_ablation_experiment(X_cnn_prim=None, X_cnn_ext=None, X_tda_prim=None, X_tda_ext=None, y_prim=None, y_ext=None):
+    print("=" * 80)
+    print("EXPERIMENT 4: STRICT PIPELINE COMPONENT ABLATION & SHAP ANALYSIS")
+    print("=" * 80)
 
-    # tda_dim = 5600 -> Landscapes = 600, Persistence Images = 5000
-    X_land_tr = X_tda_tr[:, :600]
-    X_land_va = X_tda_va[:, :600]
+    if X_cnn_prim is None or X_tda_prim is None:
+        X_imgs_prim, y_prim, groups_prim, _, _ = load_real_images("data/primary")
+        X_imgs_ext, y_ext, _, _, _ = load_real_images("data/external")
 
-    X_pi_tr = X_tda_tr[:, 600:]
-    X_pi_va = X_tda_va[:, 600:]
+        print("\n[+] Extracting Features for Ablation Analysis...")
+        X_cnn_prim = extract_cnn(X_imgs_prim)
+        X_cnn_ext = extract_cnn(X_imgs_ext)
 
-    X_hybrid_tr = np.hstack([X_tda_tr, X_cnn_tr])
-    X_hybrid_va = np.hstack([X_tda_va, X_cnn_va])
+        X_tda_prim = extract_tda(X_imgs_prim)
+        X_tda_ext = extract_tda(X_imgs_ext)
 
-    configs = [
-        ("1. CNN Only", X_cnn_tr, X_cnn_va),
-        ("2. Landscapes Only", X_land_tr, X_land_va),
-        ("3. Images Only", X_pi_tr, X_pi_va),
-        ("4. Hybrid (TDA+CNN)", X_hybrid_tr, X_hybrid_va)
-    ]
+    X_hybrid_prim = np.hstack([X_tda_prim, X_cnn_prim])
+    X_hybrid_ext = np.hstack([X_tda_ext, X_cnn_ext])
 
-    labels = []
-    recalls = []
-    aucs = []
-
-    for name, X_tr, X_va in configs:
-        labels.append(name)
-
-        # Scale and train ExtraTrees
-        scaler = StandardScaler()
-        X_tr_sc = scaler.fit_transform(X_tr)
-        X_va_sc = scaler.transform(X_va)
-
-        if X_tr.shape[1] > 100:
-            pca = PCA(n_components=min(100, X_tr.shape[1]), random_state=RANDOM_STATE)
-            X_tr_sc = pca.fit_transform(X_tr_sc)
-            X_va_sc = pca.transform(X_va_sc)
-
-        clf = ExtraTreesClassifier(
-            n_estimators=500,
-            class_weight='balanced',
-            max_features='sqrt',
-            min_samples_leaf=4,
-            random_state=RANDOM_STATE,
-            n_jobs=-1
+    # 4 Pipeline Stages
+    stages = {
+        "1. CNN Only": (
+            X_cnn_prim, X_cnn_ext,
+            Pipeline([('scaler', StandardScaler()), ('clf', SVC(kernel='rbf', class_weight='balanced', probability=True, random_state=RANDOM_STATE))])
+        ),
+        "2. TDA Only": (
+            X_tda_prim, X_tda_ext,
+            Pipeline([('scaler', StandardScaler()), ('clf', SVC(kernel='rbf', class_weight='balanced', probability=True, random_state=RANDOM_STATE))])
+        ),
+        "3. CNN + TDA (Raw)": (
+            X_hybrid_prim, X_hybrid_ext,
+            Pipeline([('scaler', StandardScaler()), ('clf', SVC(kernel='rbf', class_weight='balanced', probability=True, random_state=RANDOM_STATE))])
+        ),
+        "4. Finalized Pipeline (CNN+TDA+L1+PCA+SVM)": (
+            X_hybrid_prim, X_hybrid_ext,
+            Pipeline([
+                ('scaler', StandardScaler()),
+                ('feature_selection', SelectFromModel(
+                    LogisticRegression(penalty='l1', solver='liblinear', class_weight='balanced', random_state=RANDOM_STATE, C=0.1)
+                )),
+                ('pca', PCA(n_components=120, random_state=RANDOM_STATE)),
+                ('clf', SVC(kernel='rbf', class_weight='balanced', probability=True, C=10.0, gamma='scale', random_state=RANDOM_STATE))
+            ])
         )
-        clf.fit(X_tr_sc, y_tr)
+    }
 
-        y_pred = clf.predict(X_va_sc)
-        y_prob = clf.predict_proba(X_va_sc)[:, 1]
+    ablation_results = []
 
-        rec = recall_score(y_va, y_pred, zero_division=0)
-        auc = roc_auc_score(y_va, y_prob)
+    for name, (X_tr, X_te, pipe) in stages.items():
+        pipe.fit(X_tr, y_prim)
+        y_prob = pipe.predict_proba(X_te)[:, 1]
+        ext_auc = roc_auc_score(y_ext, y_prob)
+        ext_pred = (y_prob >= 0.5).astype(int)
+        ext_acc = accuracy_score(y_ext, ext_pred)
+        ext_sens = recall_score(y_ext, ext_pred)
+        tn, fp, fn, tp = confusion_matrix(y_ext, ext_pred).ravel()
+        ext_spec = tn / (tn + fp) if (tn + fp) > 0 else 0.0
 
-        recalls.append(rec)
-        aucs.append(auc)
+        print(f"\n[+] {name}:")
+        print(f"    External ROC-AUC : {ext_auc:.4f}")
+        print(f"    External Accuracy: {ext_acc:.4f}")
+        print(f"    Sensitivity      : {ext_sens:.4f} | Specificity: {ext_spec:.4f}")
 
-        print(f"  Modality: {name:20s} | Recall: {rec:.4f} | ROC-AUC: {auc:.4f}")
+        ablation_results.append({
+            "Stage": name,
+            "External_AUC": ext_auc,
+            "External_Acc": ext_acc,
+            "Sensitivity": ext_sens,
+            "Specificity": ext_spec
+        })
 
-    # Waterfall Bar Chart
-    os.makedirs(save_dir, exist_ok=True)
-    sns.set_theme(style="whitegrid")
-    fig, ax = plt.subplots(figsize=(10, 5.5))
+    # SHAP Quantification for Finalized Pipeline
+    print("\n[+] Computing SHAP Feature Quantification for Finalized Pipeline...")
+    final_pipe = stages["4. Finalized Pipeline (CNN+TDA+L1+PCA+SVM)"][2]
 
-    x_idx = np.arange(len(labels))
-    width = 0.35
+    # Transform features through pipeline steps before classifier
+    scaler = final_pipe.named_steps['scaler']
+    feat_sel = final_pipe.named_steps['feature_selection']
+    pca = final_pipe.named_steps['pca']
+    clf = final_pipe.named_steps['clf']
 
-    rects1 = ax.bar(x_idx - width/2, aucs, width, label='ROC-AUC Score', color='#1f77b4', edgecolor='black')
-    rects2 = ax.bar(x_idx + width/2, recalls, width, label='Recall / Sensitivity', color='#2ca02c', edgecolor='black')
+    X_scaled_ext = scaler.transform(X_hybrid_ext)
+    X_sel_ext = feat_sel.transform(X_scaled_ext)
+    X_pca_ext = pca.transform(X_sel_ext)
 
-    for rect in rects1:
-        h = rect.get_height()
-        ax.annotate(f"{h:.3f}", xy=(rect.get_x() + rect.get_width()/2, h),
-                    xytext=(0, 3), textcoords="offset points", ha='center', va='bottom', fontsize=9, fontweight='bold')
+    # Use SHAP KernelExplainer with sampled background and test sets for fast execution
+    bg_samples = shap.sample(X_pca_ext, 10, random_state=RANDOM_STATE)
+    test_samples = X_pca_ext[:10]
 
-    for rect in rects2:
-        h = rect.get_height()
-        ax.annotate(f"{h:.3f}", xy=(rect.get_x() + rect.get_width()/2, h),
-                    xytext=(0, 3), textcoords="offset points", ha='center', va='bottom', fontsize=9, fontweight='bold')
+    explainer = shap.KernelExplainer(clf.predict_proba, bg_samples)
+    shap_values = explainer.shap_values(test_samples)
 
-    ax.set_xticks(x_idx)
-    ax.set_xticklabels(labels, fontsize=10, fontweight='bold')
-    ax.set_ylim(0.0, 1.15)
-    ax.set_title("Exp 7: Feature Waterfall — Modality Contribution & Incremental Gains", fontsize=13, fontweight='bold', pad=12)
-    ax.set_ylabel("Metric Value", fontsize=11, fontweight='bold')
-    ax.legend(fontsize=10.5, frameon=True, loc='upper left')
-    plt.tight_layout()
+    if isinstance(shap_values, list):
+        shap_vals_class1 = np.abs(shap_values[1]).mean(axis=0)
+    else:
+        shap_vals_class1 = np.abs(shap_values).mean(axis=0)
 
-    out_path = os.path.join(save_dir, "exp7_feature_waterfall.jpg")
-    plt.savefig(out_path, dpi=dpi, format="jpg", bbox_inches="tight")
-    plt.close(fig)
-    print(f"  [+] Saved plot to {out_path}")
+    top10_components = np.argsort(shap_vals_class1)[::-1][:10]
+    print(f"  Top 10 PCA Component SHAP Importances: {shap_vals_class1[top10_components]}")
 
-    return {"labels": labels, "recalls": recalls, "aucs": aucs}
+    return ablation_results, shap_vals_class1
 
 
-# =====================================================================
-# Experiment 8: PCA Dimensionality Component Sweep
-# =====================================================================
-def run_experiment_8_pca_sweep(X_hybrid_tr, y_tr, X_hybrid_va, y_va, save_dir="images", dpi=300):
-    print("\n[+] Running Experiment 8: PCA Dimension Component Sweep...")
-
-    k_components = [20, 50, 100, 150, 200]
-    recalls = []
-    aucs = []
-
-    scaler = StandardScaler()
-    X_tr_sc = scaler.fit_transform(X_hybrid_tr)
-    X_va_sc = scaler.transform(X_hybrid_va)
-
-    for k in k_components:
-        pca = PCA(n_components=k, random_state=RANDOM_STATE)
-        X_tr_pca = pca.fit_transform(X_tr_sc)
-        X_va_pca = pca.transform(X_va_sc)
-
-        clf = ExtraTreesClassifier(
-            n_estimators=500,
-            class_weight='balanced',
-            max_features='sqrt',
-            min_samples_leaf=4,
-            random_state=RANDOM_STATE,
-            n_jobs=-1
-        )
-        clf.fit(X_tr_pca, y_tr)
-
-        y_pred = clf.predict(X_va_pca)
-        y_prob = clf.predict_proba(X_va_pca)[:, 1]
-
-        rec = recall_score(y_va, y_pred, zero_division=0)
-        auc = roc_auc_score(y_va, y_prob)
-
-        recalls.append(rec)
-        aucs.append(auc)
-
-        print(f"  PCA Components K={k:3d} | Recall: {rec:.4f} | ROC-AUC: {auc:.4f}")
-
-    # Plot PCA Sweep Curves
-    os.makedirs(save_dir, exist_ok=True)
-    sns.set_theme(style="whitegrid")
-    fig, ax = plt.subplots(figsize=(9, 5.5))
-
-    ax.plot(k_components, aucs, marker='o', linewidth=2.5, markersize=8, color='#1f77b4', label='ROC-AUC Score')
-    ax.plot(k_components, recalls, marker='s', linewidth=2.5, markersize=8, color='#2ca02c', label='Recall / Sensitivity')
-
-    # Highlight optimal operating point K=100
-    ax.axvline(100, color='#d9534f', linestyle='--', linewidth=2, label='Optimal Operating Point (K=100)')
-
-    ax.set_xticks(k_components)
-    ax.set_title("Exp 8: PCA Dimension Sweep vs. Discriminative Performance", fontsize=13, fontweight='bold', pad=12)
-    ax.set_xlabel("Number of PCA Principal Components (K)", fontsize=11, fontweight='bold')
-    ax.set_ylabel("Metric Score", fontsize=11, fontweight='bold')
-    ax.legend(fontsize=10.5, frameon=True, loc='lower right')
-    plt.tight_layout()
-
-    out_path = os.path.join(save_dir, "exp8_pca_sweep.jpg")
-    plt.savefig(out_path, dpi=dpi, format="jpg", bbox_inches="tight")
-    plt.close(fig)
-    print(f"  [+] Saved plot to {out_path}")
-
-    return {"k_components": k_components, "recalls": recalls, "aucs": aucs}
+if __name__ == "__main__":
+    run_ablation_experiment()
