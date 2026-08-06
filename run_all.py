@@ -87,7 +87,7 @@ def main():
 
     # 5. Fit Models
     print("\n[+] Training CNN-Only Baseline & Hybrid CNN-TDA Pipeline...")
-    cnn_model, hybrid_pipeline = build_models(n_components=100)
+    cnn_model, hybrid_pipeline = build_models(n_components=50)
 
     cnn_model.fit(X_cnn_train, y_train)
     hybrid_pipeline.fit(X_hybrid_train, y_train)

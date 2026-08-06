@@ -28,6 +28,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.pipeline import Pipeline
+from sklearn.feature_selection import SelectFromModel
+from sklearn.linear_model import LogisticRegression
 
 RANDOM_STATE = 42
 np.random.seed(RANDOM_STATE)
@@ -102,49 +104,30 @@ def setup_data_split(base_dir="data"):
     return primary_dir, external_dir
 
 
-def load_real_images(data_dir, img_size=(64, 64), max_samples=None):
+def load_real_images(data_dir, img_size=(64, 64)):
     """
-    Loads real medical images from disk, extracts Otsu ROI bounding boxes,
-    resizes to img_size, and parses Patient IDs to guarantee zero-leakage StratifiedGroupKFold.
-    
-    Returns:
-        X_imgs: np.ndarray (N, H, W) normalized to [0, 1]
-        y: np.ndarray (N,) binary labels (0=benign, 1=malignant)
-        groups: np.ndarray (N,) Patient ID strings
-        roi_boxes: list of (x, y, w, h) bounding box coordinates
-        orig_imgs: list of un-cropped grayscale images
+    Loads real radiological images from disk recursively via os.walk, applies Otsu thresholding ROI crop,
+    parses Patient IDs for leakage-free CV grouping.
+    Returns: X_imgs (N, 64, 64), y (N,), groups (N,), roi_boxes, orig_imgs
     """
-    benign_folder = os.path.join(data_dir, "benign")
-    malignant_folder = os.path.join(data_dir, "malignant")
-
-    if not os.path.exists(benign_folder) or not os.path.exists(malignant_folder):
-        # Check alternative folder naming
-        benign_folder = os.path.join(data_dir, "BreastCancer_Benign")
-        malignant_folder = os.path.join(data_dir, "BreastCancer_Maglinant")
-
-    paths = []
-    for label, folder in [(0, benign_folder), (1, malignant_folder)]:
-        if os.path.exists(folder):
-            for f in os.listdir(folder):
-                if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
-                    paths.append((os.path.join(folder, f), label, f))
-
-    if not paths:
-        raise FileNotFoundError(f"No real medical images found in '{data_dir}'.")
-
-    if max_samples and max_samples < len(paths):
-        np.random.seed(RANDOM_STATE)
-        selected_idx = np.random.choice(len(paths), max_samples, replace=False)
-        paths = [paths[i] for i in selected_idx]
-
     images = []
     labels = []
     groups = []
     roi_boxes = []
     orig_imgs = []
 
-    print(f"[+] Loading real medical imagery from {data_dir} ({len(paths)} images)...")
-    for file_path, label, filename in tqdm(paths, desc="Ingesting ROI Imagery"):
+    paths = []
+    for root, _, files in os.walk(data_dir):
+        for f in files:
+            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
+                full = os.path.join(root, f)
+                label = 1 if ('malignant' in root.lower() or 'maglinant' in root.lower()) else 0
+                paths.append((full, label, f))
+
+    paths = sorted(paths, key=lambda x: x[2])
+    print(f"  [+] Loading real medical imagery from {data_dir} ({len(paths)} images)...")
+
+    for file_path, label, filename in tqdm(paths, desc="Ingesting ROI Imagery", leave=False):
         img = cv2.imread(file_path, cv2.IMREAD_GRAYSCALE)
         if img is None or img.size == 0:
             continue
@@ -351,9 +334,9 @@ def extract_tda(X_imgs, batch_size=500):
 # =====================================================================
 # 5. Classifier Builders
 # =====================================================================
-def build_models(n_components=100, random_state=RANDOM_STATE):
+def build_models(n_components=50, random_state=RANDOM_STATE):
     """
-    Initializes CNN-only classifier and Hybrid pipeline wrapped with StandardScaler, PCA, and balanced ExtraTrees.
+    Initializes CNN-only classifier and Hybrid pipeline wrapped with StandardScaler, L1 Lasso selection, PCA, and balanced ExtraTrees.
     """
     cnn_model = Pipeline([
         ('scaler', StandardScaler()),
@@ -361,7 +344,7 @@ def build_models(n_components=100, random_state=RANDOM_STATE):
             n_estimators=500,
             class_weight='balanced',
             max_features='sqrt',
-            min_samples_leaf=4,
+            min_samples_leaf=8,
             random_state=random_state,
             n_jobs=-1
         ))
@@ -369,12 +352,15 @@ def build_models(n_components=100, random_state=RANDOM_STATE):
 
     hybrid_pipeline = Pipeline([
         ('scaler', StandardScaler()),
+        ('l1_select', SelectFromModel(
+            LogisticRegression(penalty='l1', solver='liblinear', C=0.01, random_state=random_state, class_weight='balanced')
+        )),
         ('pca', PCA(n_components=n_components, random_state=random_state)),
         ('clf', ExtraTreesClassifier(
             n_estimators=500,
             class_weight='balanced',
             max_features='sqrt',
-            min_samples_leaf=4,
+            min_samples_leaf=8,
             random_state=random_state,
             n_jobs=-1
         ))

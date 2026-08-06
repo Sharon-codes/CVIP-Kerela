@@ -156,6 +156,8 @@ def run_experiment_10_pipeline_breakdown(sample_raw_imgs, roi_boxes_sample, hybr
     tracemalloc.start()
     t0 = time.perf_counter()
     X_scaled = scaler.transform(X_hybrid_sample)
+    if 'l1_select' in hybrid_pipeline.named_steps:
+        X_scaled = hybrid_pipeline.named_steps['l1_select'].transform(X_scaled)
     X_pca = pca.transform(X_scaled)
     t1 = time.perf_counter()
     _, peak4 = tracemalloc.get_traced_memory()
